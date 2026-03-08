@@ -175,4 +175,77 @@ export class WorldManager {
     if (!chunk) return BlockId.AIR;
     return chunk.getBlockWorld(wx, wy, wz);
   }
+
+  // ワールド座標でブロックを設定し、チャンクのメッシュと物理を再構築
+  setBlock(wx: number, wy: number, wz: number, blockId: BlockId): void {
+    const cx = Math.floor(wx / CHUNK_SIZE);
+    const cy = Math.floor(wy / CHUNK_SIZE);
+    const cz = Math.floor(wz / CHUNK_SIZE);
+    const key = chunkKey(cx, cy, cz);
+    const chunk = this.chunks.get(key);
+    if (!chunk) return;
+
+    const lx = wx - chunk.worldX;
+    const ly = wy - chunk.worldY;
+    const lz = wz - chunk.worldZ;
+    chunk.setBlock(lx, ly, lz, blockId);
+
+    // メッシュ再構築
+    this.rebuildChunkMesh(key, chunk);
+
+    // 物理再構築
+    this.rebuildChunkPhysics(key, chunk);
+
+    // 隣接チャンクも再構築（ブロックがチャンク境界にある場合）
+    if (lx === 0) this.rebuildNeighbor(cx - 1, cy, cz);
+    if (lx === CHUNK_SIZE - 1) this.rebuildNeighbor(cx + 1, cy, cz);
+    if (ly === 0) this.rebuildNeighbor(cx, cy - 1, cz);
+    if (ly === CHUNK_SIZE - 1) this.rebuildNeighbor(cx, cy + 1, cz);
+    if (lz === 0) this.rebuildNeighbor(cx, cy, cz - 1);
+    if (lz === CHUNK_SIZE - 1) this.rebuildNeighbor(cx, cy, cz + 1);
+  }
+
+  // 隣接チャンクのメッシュを再構築
+  private rebuildNeighbor(cx: number, cy: number, cz: number): void {
+    const key = chunkKey(cx, cy, cz);
+    const chunk = this.chunks.get(key);
+    if (chunk) {
+      this.rebuildChunkMesh(key, chunk);
+    }
+  }
+
+  // チャンクのメッシュを再構築
+  private rebuildChunkMesh(key: string, chunk: Chunk): void {
+    // 既存メッシュを除去
+    const oldMesh = this.chunkMeshes.get(key);
+    if (oldMesh) {
+      this.scene.remove(oldMesh);
+      oldMesh.geometry.dispose();
+      this.chunkMeshes.delete(key);
+    }
+
+    // 新しいメッシュを生成
+    if (!chunk.isEmpty()) {
+      const mesh = this.mesher.buildMesh(chunk, this.getBlockWorld.bind(this));
+      if (mesh) {
+        this.scene.add(mesh);
+        this.chunkMeshes.set(key, mesh);
+      }
+    }
+  }
+
+  // チャンクの物理ボディを再構築
+  private rebuildChunkPhysics(key: string, chunk: Chunk): void {
+    // 既存ボディを除去
+    const oldBody = this.chunkBodies.get(key);
+    if (oldBody) {
+      this.physicsWorld.removeBody(oldBody);
+      this.chunkBodies.delete(key);
+    }
+
+    // 新しいボディを構築
+    if (!chunk.isEmpty()) {
+      this.buildPhysicsBody(chunk, key);
+    }
+  }
 }

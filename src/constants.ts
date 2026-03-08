@@ -6,7 +6,7 @@ export const CAMERA_FAR = 1000;
 
 // === カメラ ===
 export const CAMERA_PITCH_ANGLE = 50; // 俯角（度）
-export const CAMERA_DISTANCE = 15; // プレイヤーからの距離（ブロック）
+export const CAMERA_DISTANCE = 10; // プレイヤーからの距離（ブロック）
 export const CAMERA_LERP_FACTOR = 0.1; // スムーズ追従の補間係数
 export const CAMERA_ROTATE_SPEED = 0.01; // マウスドラッグ回転速度
 export const CAMERA_PITCH_MIN = 10; // ピッチ最小角度（度）
@@ -95,6 +95,22 @@ export const BLOCK_LEAVES_COLOR = '#2d8c2d'; // 葉
 export const BLOCK_DARK_LEAVES_COLOR = '#1a6b1a'; // 森の暗い葉
 export const BLOCK_CACTUS_COLOR = '#2d7a2d'; // サボテン
 export const BLOCK_DEAD_WOOD_COLOR = '#8b7355'; // 枯れ木
+
+// === ブロック操作 ===
+export const BLOCK_INTERACT_RANGE = 5; // 操作範囲（プレイヤーからの距離、ブロック）
+export const BLOCK_HIGHLIGHT_COLOR = 0xffffff; // ハイライト色
+export const BLOCK_HIGHLIGHT_OPACITY = 0.3; // ハイライト透明度
+
+// === インベントリ ===
+export const HOTBAR_SLOTS = 8; // ホットバースロット数
+export const BACKPACK_SLOTS = 24; // バックパックスロット数
+export const MAX_STACK_SIZE = 64; // 最大スタック数
+
+// === HUD ===
+export const HOTBAR_SLOT_SIZE = 48; // ホットバースロットサイズ（px）
+export const HOTBAR_SLOT_GAP = 4; // スロット間隔（px）
+export const HOTBAR_SELECTED_COLOR = '#ffcc00'; // 選択中スロットの枠色
+export const HOTBAR_BG_COLOR = 'rgba(0, 0, 0, 0.6)'; // スロット背景色
 
 // === 物理 ===
 export const PHYSICS_TIMESTEP = 1 / 60;

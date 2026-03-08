@@ -5,8 +5,13 @@ import { WorldManager } from './world/WorldManager';
 import { PlayerController } from './player/PlayerController';
 import { CameraController } from './player/CameraController';
 import { InputManager } from './player/InputManager';
+import { BlockInteraction } from './blocks/BlockInteraction';
+import { Inventory } from './inventory/Inventory';
+import { HUD } from './ui/HUD';
+import { InventoryUI } from './ui/InventoryUI';
+import { getDebugLog } from './ui/DebugLog';
 
-// ゲームのメインクラス。シーン・カメラ・レンダラー・物理ワールドの管理とゲームループを担当する。
+// ゲームのメインクラス
 export class Game {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
@@ -17,6 +22,10 @@ export class Game {
   private playerController: PlayerController;
   private cameraController: CameraController;
   private worldManager: WorldManager;
+  private blockInteraction: BlockInteraction;
+  private inventory: Inventory;
+  private hud: HUD;
+  private inventoryUI: InventoryUI;
   private clock: THREE.Clock;
 
   constructor() {
@@ -29,8 +38,6 @@ export class Game {
     // シーン初期化
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(SKY_COLOR);
-
-    // フォグ（遠景をフェードアウト）
     this.scene.fog = new THREE.Fog(SKY_COLOR, 80, 160);
 
     // ライティング
@@ -52,13 +59,11 @@ export class Game {
     // 入力管理
     this.inputManager = new InputManager(this.renderer.domElement);
 
-    // ワールド管理（チャンクベース）
+    // ワールド管理
     this.worldManager = new WorldManager(this.scene, this.physicsWorld);
-
-    // スポーン位置を取得
     const spawn = this.worldManager.getSpawnPosition();
 
-    // プレイヤー生成（スポーン位置を渡す）
+    // プレイヤー生成
     this.playerController = new PlayerController(this.physicsWorld, this.scene, spawn);
 
     // 初回チャンクロード
@@ -67,11 +72,33 @@ export class Game {
     // カメラコントローラー
     this.cameraController = new CameraController(this.camera);
 
+    // インベントリ
+    this.inventory = new Inventory();
+
+    // ブロック操作
+    this.blockInteraction = new BlockInteraction(
+      this.scene, this.camera, this.worldManager, this.inventory
+    );
+    this.blockInteraction.setPlayerController(this.playerController);
+
+    // HUD
+    this.hud = new HUD(this.inventory);
+
+    // インベントリUI
+    this.inventoryUI = new InventoryUI(this.inventory);
+
     // 時間管理
     this.clock = new THREE.Clock();
 
     // リサイズ対応
     window.addEventListener('resize', this.onResize.bind(this));
+
+    // デバッグログ
+    const debug = getDebugLog();
+    debug.log('CCCraft 起動');
+    debug.log(`スポーン位置: (${spawn.x}, ${spawn.y}, ${spawn.z})`);
+    debug.log('操作: WASD移動 / Space飛行 / 左クリック破壊 / 右クリック設置');
+    debug.log('操作: 右ドラッグ カメラ回転 / 1-8 ホットバー / E インベントリ');
   }
 
   private onResize(): void {
@@ -82,7 +109,6 @@ export class Game {
     this.renderer.setSize(width, height);
   }
 
-  // ゲームループ開始
   start(): void {
     this.renderer.setAnimationLoop(this.update.bind(this));
   }
@@ -97,12 +123,28 @@ export class Game {
     const cameraYaw = this.cameraController.getYaw();
     this.playerController.update(dt, this.inputManager, cameraYaw);
 
-    // チャンク更新（プレイヤー位置に基づく）
+    // チャンク更新
     const playerPos = this.playerController.getPosition();
     this.worldManager.update(playerPos.x, playerPos.z);
 
     // カメラ更新
     this.cameraController.update(playerPos, this.inputManager);
+
+    // インベントリ開閉
+    if (this.inputManager.consumeInventoryToggle()) {
+      this.inventoryUI.toggle();
+    }
+
+    // ブロック操作更新（インベントリ開いてる間は無効）
+    if (!this.inventoryUI.isOpen) {
+      this.blockInteraction.update(dt, this.inputManager, playerPos);
+    }
+
+    // HUD更新
+    this.hud.update();
+
+    // 入力フレーム終了
+    this.inputManager.endFrame();
 
     // 描画
     this.renderer.render(this.scene, this.camera);

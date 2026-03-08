@@ -10,7 +10,6 @@ import {
   PLAYER_JUMP_HEIGHT,
   GRAVITY,
   PLAYER_TOTAL_HEIGHT,
-  GROUND_CONTACT_THRESHOLD,
 } from '../constants';
 
 // プレイヤーの物理ボディと移動制御を管理するクラス
@@ -19,7 +18,6 @@ export class PlayerController {
   readonly model: PlayerModel;
 
   private currentVelocity = new THREE.Vector2(0, 0); // 水平速度(x, z)
-  private isGrounded = false;
 
   constructor(physicsWorld: CANNON.World, scene: THREE.Scene, spawnPos?: { x: number; y: number; z: number }) {
     this.model = new PlayerModel();
@@ -58,16 +56,6 @@ export class PlayerController {
     // シーンにモデルを追加
     scene.add(this.model.group);
 
-    // 接地判定用のコンタクトイベント
-    this.body.addEventListener('collide', () => {
-      // 衝突したら接地とみなす（簡易判定）
-      this.checkGrounded();
-    });
-  }
-
-  private checkGrounded(): void {
-    // 垂直速度がほぼ0以下なら接地
-    this.isGrounded = Math.abs(this.body.velocity.y) < GROUND_CONTACT_THRESHOLD;
   }
 
   update(dt: number, input: InputManager, cameraYaw: number): void {
@@ -146,6 +134,14 @@ export class PlayerController {
     } else {
       return Math.max(current - maxDelta, target);
     }
+  }
+
+  // ブロック操作時など、指定した座標の方向にキャラを向ける
+  lookAt(targetX: number, targetZ: number): void {
+    const pos = this.body.position;
+    const dx = targetX - pos.x;
+    const dz = targetZ - pos.z;
+    this.model.group.rotation.y = Math.atan2(dx, dz);
   }
 
   getPosition(): THREE.Vector3 {

@@ -24,20 +24,29 @@ const FACE_VERTICES: readonly (readonly (readonly [number, number, number])[])[]
   [[0,0,0],[0,1,0],[1,1,0],[1,0,0]], // NZ
 ] as const;
 
+// 各面の4頂点のUV（テクスチャ座標、セル内相対）
+const FACE_UVS: readonly (readonly [number, number])[] = [
+  [0, 0], [0, 1], [1, 1], [1, 0],
+];
+
 // チャンクのメッシュを生成するクラス
-// 頂点カラーベースで1マテリアルにまとめ、描画コール数を削減する
+// テクスチャアトラス + UVマッピングで描画
 export class ChunkMesher {
   private textures: BlockTextures;
+  private material: THREE.MeshLambertMaterial;
 
   constructor(textures: BlockTextures) {
     this.textures = textures;
+    this.material = new THREE.MeshLambertMaterial({
+      map: textures.getAtlas(),
+    });
   }
 
   // チャンクからメッシュを生成
   buildMesh(chunk: Chunk, getNeighborBlock: (wx: number, wy: number, wz: number) => BlockId): THREE.Mesh | null {
     const positions: number[] = [];
     const normals: number[] = [];
-    const colors: number[] = [];
+    const uvs: number[] = [];
     const indices: number[] = [];
     let vertexCount = 0;
 
@@ -61,14 +70,17 @@ export class ChunkMesher {
 
             if (isOpaque(neighborId)) continue;
 
-            // ブロック・面の色を取得
-            const color = this.textures.getColor(blockId, face as FaceDir);
+            // アトラスUVを取得
+            const { u, v, size } = this.textures.getUV(blockId, face as FaceDir);
 
             const verts = FACE_VERTICES[face]!;
-            for (const [vx, vy, vz] of verts) {
+            for (let i = 0; i < 4; i++) {
+              const [vx, vy, vz] = verts[i]!;
               positions.push(wx + vx, wy + vy, wz + vz);
               normals.push(nx, ny, nz);
-              colors.push(color.r, color.g, color.b);
+              // アトラス上のUV
+              const [fu, fv] = FACE_UVS[i]!;
+              uvs.push(u + fu * size, v + fv * size);
             }
 
             const base = vertexCount;
@@ -84,11 +96,10 @@ export class ChunkMesher {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geometry.setIndex(indices);
 
-    const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-    return new THREE.Mesh(geometry, material);
+    return new THREE.Mesh(geometry, this.material);
   }
 
   // ローカル座標でブロック取得（チャンク外は隣接チャンク参照）
