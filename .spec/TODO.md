@@ -1,15 +1,24 @@
-# TODO - タスクリスト
+# TODO - Phase 1: ワールドとキャラクター
 
 ## 優先度：高
+（全て完了）
+
 ## 優先度：中
+（全て完了）
+
 ## 優先度：低
+
 ## 完了済み
 - [x] 初期セットアップ（make_projectによるプロジェクト構造作成）
-- [x] Vite + TypeScript + Three.js プロジェクトの初期化（package.json, tsconfig.json, vite.config.ts）
-- [x] npm install 実行
-- [x] index.html 作成
-- [x] src/constants.ts 作成（Phase 0のパラメータ定義）
-- [x] src/Game.ts 作成（シーン・カメラ・レンダラー初期化、ゲームループ、リサイズ対応）
-- [x] src/main.ts 作成（エントリーポイント、Game初期化）
-- [x] CLAUDE.md にGDDへの参照を追加
-- [x] `npm run dev` で青い空が表示されることを確認
+- [x] Phase 0: プロジェクト基盤の構築
+- [x] cannon-es インストール
+- [x] constants.ts にPhase 1パラメータ追加（移動速度、重力、カメラ設定、島サイズ等）
+- [x] InputManager.ts 作成（キーボード・マウス入力の一元管理）
+- [x] BlockTextures.ts 作成（草・土ブロックのプロシージャルテクスチャ生成）
+- [x] FlatIsland.ts 作成（半径30のフラット浮島メッシュ + cannon-es衝突体）
+- [x] PlayerModel.ts 作成（ボクセルキャラクターモデル + 歩行アニメーション）
+- [x] PlayerController.ts 作成（cannon-es物理ボディ、移動・ジャンプ制御）
+- [x] CameraController.ts 作成（3rdパーソンカメラ、マウスドラッグ回転、スムーズ追従）
+- [x] Game.ts 改修（cannon-es物理ワールド初期化、各コンポーネント統合、updateループ）
+- [x] 走行（Shift長押し）対応
+- [x] 水平方向の加速/減速（即座に最高速にならない）
