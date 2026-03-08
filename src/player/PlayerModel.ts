@@ -165,24 +165,36 @@ export class PlayerModel {
       this.addNoise(ctx, s, seed, '#eebb88', '#ffdda8');
 
       if (isFront) {
+        // 前髪
+        ctx.fillStyle = '#4a3020';
+        ctx.fillRect(0, 0, s, 4);
+        // 前髪の毛先（ギザギザ）
+        ctx.fillRect(1, 4, 2, 2);
+        ctx.fillRect(5, 4, 2, 1);
+        ctx.fillRect(9, 4, 2, 1);
+        ctx.fillRect(13, 4, 2, 2);
+        ctx.fillStyle = '#3a2010';
+        ctx.fillRect(3, 3, 1, 2);
+        ctx.fillRect(7, 3, 1, 1);
+        ctx.fillRect(11, 3, 1, 1);
         // 目
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(3, 5, 4, 3);
-        ctx.fillRect(9, 5, 4, 3);
+        ctx.fillRect(3, 6, 4, 3);
+        ctx.fillRect(9, 6, 4, 3);
         // 瞳
         ctx.fillStyle = '#2244aa';
-        ctx.fillRect(5, 5, 2, 3);
-        ctx.fillRect(11, 5, 2, 3);
+        ctx.fillRect(5, 6, 2, 3);
+        ctx.fillRect(11, 6, 2, 3);
         // 瞳孔
         ctx.fillStyle = '#111111';
-        ctx.fillRect(5, 6, 1, 2);
-        ctx.fillRect(11, 6, 1, 2);
+        ctx.fillRect(5, 7, 1, 2);
+        ctx.fillRect(11, 7, 1, 2);
         // 口
         ctx.fillStyle = '#cc8866';
-        ctx.fillRect(6, 11, 4, 1);
+        ctx.fillRect(6, 12, 4, 1);
         // 鼻
         ctx.fillStyle = '#eebb88';
-        ctx.fillRect(7, 8, 2, 2);
+        ctx.fillRect(7, 9, 2, 2);
       }
 
       return new THREE.MeshLambertMaterial({ map: this.canvasToTexture(canvas) });
@@ -209,13 +221,34 @@ export class PlayerModel {
       const { canvas, ctx } = this.createCanvas(s);
       ctx.fillStyle = '#ffcc99';
       ctx.fillRect(0, 0, s, s);
-      // 上部に髪
+      // 髪（上部〜側面を覆う）
       ctx.fillStyle = '#4a3020';
-      ctx.fillRect(0, 0, s, 4);
-      this.addNoise(ctx, s, seed, '#eebb88', '#ffdda8');
+      ctx.fillRect(0, 0, s, 5);
+      // 後ろ側の髪が長め（右端=後頭部寄り）
+      ctx.fillRect(s - 3, 5, 3, 4);
+      ctx.fillRect(s - 2, 9, 2, 2);
+      ctx.fillRect(s - 1, 11, 1, 1);
+      // 前側のもみあげ
+      ctx.fillRect(0, 5, 2, 3);
+      ctx.fillRect(0, 8, 1, 1);
+      // 髪のノイズ
+      ctx.fillStyle = '#3a2010';
+      ctx.fillRect(3, 3, 1, 2);
+      ctx.fillRect(7, 4, 1, 1);
+      ctx.fillRect(11, 3, 1, 2);
+      // 肌部分のノイズ
+      for (let y = 5; y < s; y++) {
+        for (let x = 0; x < s; x++) {
+          const r = this.seededRandom(x, y, seed + 70);
+          if (r < 0.08) {
+            ctx.fillStyle = '#eebb88';
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
       // 耳
       ctx.fillStyle = '#f0bb88';
-      ctx.fillRect(1, 6, 2, 3);
+      ctx.fillRect(3, 7, 2, 3);
       return new THREE.MeshLambertMaterial({ map: this.canvasToTexture(canvas) });
     };
 

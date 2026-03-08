@@ -30,6 +30,10 @@ export class DebugLog {
     this.container.scrollTop = this.container.scrollHeight;
   }
 
+  setVisible(visible: boolean): void {
+    this.container.style.display = visible ? 'block' : 'none';
+  }
+
   destroy(): void {
     this.container.remove();
   }

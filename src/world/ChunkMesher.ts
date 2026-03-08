@@ -31,6 +31,13 @@ const FACE_UVS: readonly (readonly [number, number])[] = [
 
 // チャンクのメッシュを生成するクラス
 // テクスチャアトラス + UVマッピングで描画
+// カメラ→プレイヤー視線の遮蔽フェード用uniform（全チャンク共有）
+export const occlusionUniforms = {
+  uCameraPos: { value: new THREE.Vector3() },
+  uPlayerPos: { value: new THREE.Vector3() },
+  uFadeRadius: { value: 0.8 }, // 視線からこの距離以内をフェード
+};
+
 export class ChunkMesher {
   private textures: BlockTextures;
   private material: THREE.MeshLambertMaterial;
@@ -39,7 +46,59 @@ export class ChunkMesher {
     this.textures = textures;
     this.material = new THREE.MeshLambertMaterial({
       map: textures.getAtlas(),
+      transparent: true,
     });
+
+    // カスタムシェーダー注入: 視線付近のフラグメントを半透明に
+    this.material.onBeforeCompile = (shader) => {
+      shader.uniforms.uCameraPos = occlusionUniforms.uCameraPos;
+      shader.uniforms.uPlayerPos = occlusionUniforms.uPlayerPos;
+      shader.uniforms.uFadeRadius = occlusionUniforms.uFadeRadius;
+
+      // 頂点シェーダー: ワールド座標をvaryingで渡す
+      shader.vertexShader = shader.vertexShader.replace(
+        'void main() {',
+        'varying vec3 vWorldPos;\nvoid main() {'
+      );
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <worldpos_vertex>',
+        '#include <worldpos_vertex>\nvWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;'
+      );
+
+      // フラグメントシェーダー: 視線との距離でフェード
+      shader.fragmentShader = shader.fragmentShader.replace(
+        'void main() {',
+        `uniform vec3 uCameraPos;
+uniform vec3 uPlayerPos;
+uniform float uFadeRadius;
+varying vec3 vWorldPos;
+void main() {`
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>
+  // カメラ→プレイヤーの線分との距離を計算
+  vec3 lineDir = uPlayerPos - uCameraPos;
+  float lineLen = length(lineDir);
+  vec3 lineNorm = lineDir / lineLen;
+  vec3 toFrag = vWorldPos - uCameraPos;
+  float t = dot(toFrag, lineNorm);
+  // 線分上のクランプ（カメラ前方〜プレイヤー手前のみ）
+  float margin = 1.0;
+  if (t > margin && t < lineLen - margin) {
+    // カメラに近いほど広く、プレイヤーに近いほど狭くフェード
+    float tNorm = t / lineLen; // 0=カメラ側, 1=プレイヤー側
+    float radius = mix(uFadeRadius * 2.0, uFadeRadius, tNorm);
+    vec3 closest = uCameraPos + lineNorm * t;
+    float dist = length(vWorldPos - closest);
+    if (dist < radius) {
+      float fade = dist / radius;
+      gl_FragColor.a *= smoothstep(0.0, 1.0, fade);
+      if (gl_FragColor.a < 0.05) discard;
+    }
+  }`
+      );
+    };
   }
 
   // チャンクからメッシュを生成

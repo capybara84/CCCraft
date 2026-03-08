@@ -31,6 +31,9 @@ export class BlockInteraction {
   // 破壊パーティクル
   private breakParticles: BreakParticles;
 
+  // ハイライト表示ON/OFF
+  private highlightEnabled = true;
+
   // プレイヤー位置
   private playerPosition = new THREE.Vector3();
 
@@ -68,6 +71,13 @@ export class BlockInteraction {
 
   setPlayerController(pc: PlayerController): void {
     this.playerController = pc;
+  }
+
+  setHighlightEnabled(enabled: boolean): void {
+    this.highlightEnabled = enabled;
+    if (!enabled) {
+      this.highlightMesh.visible = false;
+    }
   }
 
   update(dt: number, input: InputManager, playerPos: THREE.Vector3): void {
@@ -152,7 +162,7 @@ export class BlockInteraction {
         result.block.y + 0.5,
         result.block.z + 0.5
       );
-      this.highlightMesh.visible = true;
+      this.highlightMesh.visible = this.highlightEnabled;
     } else {
       this.targetBlock = null;
       this.targetNormal = null;

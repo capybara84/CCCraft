@@ -27,6 +27,9 @@ export class InputManager {
   // インベントリトグル
   private _inventoryToggled = false;
 
+  // デバッグ表示トグル
+  private _debugToggled = false;
+
   // 閾値
   private readonly HOLD_THRESHOLD = 300; // 長押し判定（ミリ秒）
   private readonly DRAG_THRESHOLD = 5; // ドラッグ判定（ピクセル）
@@ -41,6 +44,9 @@ export class InputManager {
       this.keys.add(e.code);
       if (e.code === 'KeyE') {
         this._inventoryToggled = true;
+      }
+      if (e.code === 'KeyP') {
+        this._debugToggled = true;
       }
     });
     window.addEventListener('keyup', (e) => {
@@ -185,6 +191,12 @@ export class InputManager {
   consumeInventoryToggle(): boolean {
     const toggled = this._inventoryToggled;
     this._inventoryToggled = false;
+    return toggled;
+  }
+
+  consumeDebugToggle(): boolean {
+    const toggled = this._debugToggled;
+    this._debugToggled = false;
     return toggled;
   }
 

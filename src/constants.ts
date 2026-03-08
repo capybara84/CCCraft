@@ -5,7 +5,7 @@ export const CAMERA_NEAR = 0.1;
 export const CAMERA_FAR = 1000;
 
 // === カメラ ===
-export const CAMERA_PITCH_ANGLE = 50; // 俯角（度）
+export const CAMERA_PITCH_ANGLE = 35; // 俯角（度）
 export const CAMERA_DISTANCE = 10; // プレイヤーからの距離（ブロック）
 export const CAMERA_LERP_FACTOR = 0.1; // スムーズ追従の補間係数
 export const CAMERA_ROTATE_SPEED = 0.01; // マウスドラッグ回転速度

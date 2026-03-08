@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { SKY_COLOR, CAMERA_FOV, CAMERA_NEAR, CAMERA_FAR, GRAVITY, PHYSICS_TIMESTEP } from './constants';
 import { WorldManager } from './world/WorldManager';
+import { occlusionUniforms } from './world/ChunkMesher';
 import { PlayerController } from './player/PlayerController';
 import { CameraController } from './player/CameraController';
 import { InputManager } from './player/InputManager';
@@ -27,6 +28,8 @@ export class Game {
   private hud: HUD;
   private inventoryUI: InventoryUI;
   private clock: THREE.Clock;
+  private debugVisible = true;
+
 
   constructor() {
     // レンダラー初期化
@@ -130,6 +133,13 @@ export class Game {
     // カメラ更新
     this.cameraController.update(playerPos, this.inputManager);
 
+    // デバッグ表示トグル（Pキー）
+    if (this.inputManager.consumeDebugToggle()) {
+      this.debugVisible = !this.debugVisible;
+      getDebugLog().setVisible(this.debugVisible);
+      this.blockInteraction.setHighlightEnabled(this.debugVisible);
+    }
+
     // インベントリ開閉
     if (this.inputManager.consumeInventoryToggle()) {
       this.inventoryUI.toggle();
@@ -145,6 +155,10 @@ export class Game {
 
     // 入力フレーム終了
     this.inputManager.endFrame();
+
+    // 遮蔽フェード用uniform更新
+    occlusionUniforms.uCameraPos.value.copy(this.camera.position);
+    occlusionUniforms.uPlayerPos.value.copy(playerPos);
 
     // 描画
     this.renderer.render(this.scene, this.camera);

@@ -35,16 +35,18 @@ export class BreakParticles {
     this.geometry.setAttribute('size', this.sizeAttr);
 
     this.material = new THREE.PointsMaterial({
-      size: 0.15,
+      size: 0.25,
       vertexColors: true,
       transparent: true,
-      opacity: 0.9,
+      opacity: 1.0,
+      depthTest: true,
       depthWrite: false,
       sizeAttenuation: true,
     });
 
     this.points = new THREE.Points(this.geometry, this.material);
     this.points.frustumCulled = false;
+    this.points.renderOrder = 999;
     scene.add(this.points);
   }
 
