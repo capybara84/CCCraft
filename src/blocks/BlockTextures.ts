@@ -1,108 +1,94 @@
-import {
-  TEXTURE_SIZE,
-  BLOCK_GRASS_TOP_COLOR,
-  BLOCK_GRASS_SIDE_COLOR,
-  BLOCK_GRASS_SIDE_STRIPE_COLOR,
-  BLOCK_DIRT_COLOR,
-} from '../constants';
 import * as THREE from 'three';
+import { BlockId } from './BlockTypes';
 
-// Canvas APIでプロシージャルテクスチャを生成するクラス
+// 面の方向
+export enum FaceDir {
+  PX = 0, // +x 右
+  NX = 1, // -x 左
+  PY = 2, // +y 上
+  NY = 3, // -y 下
+  PZ = 4, // +z 前
+  NZ = 5, // -z 後
+}
+
+// ブロックID・面方向ごとの色を管理するクラス
+// 頂点カラーベースで描画するため、テクスチャではなくRGB値を返す
 export class BlockTextures {
-  readonly grassTop: THREE.Texture;
-  readonly grassSide: THREE.Texture;
-  readonly dirt: THREE.Texture;
+  private colorMap = new Map<string, THREE.Color>();
 
   constructor() {
-    this.grassTop = this.createTexture(this.drawGrassTop.bind(this));
-    this.grassSide = this.createTexture(this.drawGrassSide.bind(this));
-    this.dirt = this.createTexture(this.drawDirt.bind(this));
+    this.buildAll();
   }
 
-  private createTexture(
-    drawFn: (ctx: CanvasRenderingContext2D) => void
-  ): THREE.Texture {
-    const canvas = document.createElement('canvas');
-    canvas.width = TEXTURE_SIZE;
-    canvas.height = TEXTURE_SIZE;
-    const ctx = canvas.getContext('2d')!;
-    drawFn(ctx);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.magFilter = THREE.NearestFilter;
-    texture.minFilter = THREE.NearestFilter;
-    return texture;
+  // ブロックID・面方向からカラーを取得
+  getColor(blockId: BlockId, face: FaceDir): THREE.Color {
+    return this.colorMap.get(`${blockId}_${face}`)
+      ?? this.colorMap.get(`${blockId}_default`)
+      ?? new THREE.Color(0xff00ff); // フォールバック（マゼンタ）
   }
 
-  // 草ブロック上面: 緑にランダムなドット
-  private drawGrassTop(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = BLOCK_GRASS_TOP_COLOR;
-    ctx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
-
-    // ランダムなドットで質感を出す
-    for (let i = 0; i < 20; i++) {
-      const x = Math.floor(Math.random() * TEXTURE_SIZE);
-      const y = Math.floor(Math.random() * TEXTURE_SIZE);
-      const brightness = Math.random() > 0.5 ? 20 : -20;
-      ctx.fillStyle = this.adjustBrightness(BLOCK_GRASS_TOP_COLOR, brightness);
-      ctx.fillRect(x, y, 1, 1);
+  private buildAll(): void {
+    // 草ブロック
+    this.setColor(BlockId.GRASS, FaceDir.PY, '#4a8c3f');
+    this.setColor(BlockId.GRASS, FaceDir.NY, '#6b4226');
+    for (const f of [FaceDir.PX, FaceDir.NX, FaceDir.PZ, FaceDir.NZ]) {
+      this.setColor(BlockId.GRASS, f, '#5a6b32');
     }
-  }
 
-  // 草ブロック側面: 茶色ベースで上部に緑ライン
-  private drawGrassSide(ctx: CanvasRenderingContext2D): void {
-    // 茶色ベース
-    ctx.fillStyle = BLOCK_GRASS_SIDE_COLOR;
-    ctx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
-
-    // 上部2pxに緑ライン
-    ctx.fillStyle = BLOCK_GRASS_SIDE_STRIPE_COLOR;
-    ctx.fillRect(0, 0, TEXTURE_SIZE, 2);
-
-    // ランダムなドットで質感
-    for (let i = 0; i < 15; i++) {
-      const x = Math.floor(Math.random() * TEXTURE_SIZE);
-      const y = Math.floor(Math.random() * TEXTURE_SIZE);
-      ctx.fillStyle = this.adjustBrightness(BLOCK_GRASS_SIDE_COLOR, Math.random() > 0.5 ? 10 : -10);
-      ctx.fillRect(x, y, 1, 1);
+    // 暗い草（森）
+    this.setColor(BlockId.DARK_GRASS, FaceDir.PY, '#2d6b2e');
+    this.setColor(BlockId.DARK_GRASS, FaceDir.NY, '#5a3720');
+    for (const f of [FaceDir.PX, FaceDir.NX, FaceDir.PZ, FaceDir.NZ]) {
+      this.setColor(BlockId.DARK_GRASS, f, '#3d5a28');
     }
-  }
 
-  // 土ブロック: 茶色にランダムなドット
-  private drawDirt(ctx: CanvasRenderingContext2D): void {
-    ctx.fillStyle = BLOCK_DIRT_COLOR;
-    ctx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+    // 土
+    this.setDefault(BlockId.DIRT, '#6b4226');
 
-    for (let i = 0; i < 20; i++) {
-      const x = Math.floor(Math.random() * TEXTURE_SIZE);
-      const y = Math.floor(Math.random() * TEXTURE_SIZE);
-      ctx.fillStyle = this.adjustBrightness(BLOCK_DIRT_COLOR, Math.random() > 0.5 ? 15 : -15);
-      ctx.fillRect(x, y, 1, 1);
+    // 石
+    this.setDefault(BlockId.STONE, '#808080');
+
+    // 砂
+    this.setDefault(BlockId.SAND, '#d4b96e');
+
+    // 木の幹
+    this.setColor(BlockId.WOOD, FaceDir.PY, '#a07828');
+    this.setColor(BlockId.WOOD, FaceDir.NY, '#a07828');
+    for (const f of [FaceDir.PX, FaceDir.NX, FaceDir.PZ, FaceDir.NZ]) {
+      this.setColor(BlockId.WOOD, f, '#8b6914');
     }
+
+    // 葉
+    this.setDefault(BlockId.LEAVES, '#2d8c2d');
+
+    // 暗い葉（森）
+    this.setDefault(BlockId.DARK_LEAVES, '#1a6b1a');
+
+    // サボテン
+    this.setDefault(BlockId.CACTUS, '#2d7a2d');
+
+    // 枯れ木
+    this.setDefault(BlockId.DEAD_WOOD, '#8b7355');
+
+    // 木材（クラフト）
+    this.setDefault(BlockId.PLANKS, '#b8860b');
+
+    // 石レンガ（クラフト）
+    this.setDefault(BlockId.STONE_BRICK, '#a0a0a0');
+
+    // クラフト台
+    this.setDefault(BlockId.CRAFTING_TABLE, '#c48432');
   }
 
-  // ヘルパー: 色の明度調整
-  private adjustBrightness(hex: string, amount: number): string {
-    const r = Math.min(255, Math.max(0, parseInt(hex.slice(1, 3), 16) + amount));
-    const g = Math.min(255, Math.max(0, parseInt(hex.slice(3, 5), 16) + amount));
-    const b = Math.min(255, Math.max(0, parseInt(hex.slice(5, 7), 16) + amount));
-    return `rgb(${r},${g},${b})`;
+  private setColor(blockId: BlockId, face: FaceDir, hex: string): void {
+    this.colorMap.set(`${blockId}_${face}`, new THREE.Color(hex));
   }
 
-  // 草ブロック用マテリアル配列（6面: +x, -x, +y, -y, +z, -z）
-  createGrassMaterials(): THREE.MeshLambertMaterial[] {
-    return [
-      new THREE.MeshLambertMaterial({ map: this.grassSide }), // +x 右
-      new THREE.MeshLambertMaterial({ map: this.grassSide }), // -x 左
-      new THREE.MeshLambertMaterial({ map: this.grassTop }),  // +y 上
-      new THREE.MeshLambertMaterial({ map: this.dirt }),       // -y 下
-      new THREE.MeshLambertMaterial({ map: this.grassSide }), // +z 前
-      new THREE.MeshLambertMaterial({ map: this.grassSide }), // -z 後
-    ];
-  }
-
-  // 土ブロック用マテリアル
-  createDirtMaterial(): THREE.MeshLambertMaterial {
-    return new THREE.MeshLambertMaterial({ map: this.dirt });
+  private setDefault(blockId: BlockId, hex: string): void {
+    const color = new THREE.Color(hex);
+    this.colorMap.set(`${blockId}_default`, color);
+    for (let f = 0; f <= 5; f++) {
+      this.colorMap.set(`${blockId}_${f}`, color);
+    }
   }
 }

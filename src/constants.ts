@@ -21,7 +21,6 @@ export const PLAYER_JUMP_HEIGHT = 1.25; // ジャンプ高さ（ブロック）
 export const GRAVITY = 20; // 重力加速度（ブロック/秒²）
 
 // === プレイヤーモデル ===
-// 各パーツのサイズ（ブロック単位）
 export const PLAYER_HEAD_SIZE = { w: 1, h: 1, d: 1 };
 export const PLAYER_BODY_SIZE = { w: 1, h: 1.5, d: 0.5 };
 export const PLAYER_ARM_SIZE = { w: 0.5, h: 1.5, d: 0.5 };
@@ -35,25 +34,68 @@ export const PLAYER_COLOR_ARM = 0xffcc99; // 肌色
 export const PLAYER_COLOR_LEG = 0x1a1a4e; // 濃紺
 
 // 歩行アニメーション
-export const PLAYER_WALK_ANIM_SPEED = 8; // 振りの速さ
-export const PLAYER_WALK_ANIM_AMPLITUDE = 0.6; // 振りの角度（ラジアン）
-export const PLAYER_RUN_ANIM_SPEED = 12; // 走行時の振りの速さ
-export const PLAYER_RUN_ANIM_AMPLITUDE = 0.8; // 走行時の振りの角度
+export const PLAYER_WALK_ANIM_SPEED = 8;
+export const PLAYER_WALK_ANIM_AMPLITUDE = 0.6;
+export const PLAYER_RUN_ANIM_SPEED = 12;
+export const PLAYER_RUN_ANIM_AMPLITUDE = 0.8;
 
-// === 浮島 ===
-export const ISLAND_RADIUS = 30; // 半径（ブロック）
-export const ISLAND_HEIGHT_Y = 40; // 島のY座標
-export const ISLAND_THICKNESS = 5; // 島の厚さ（ブロック）
+// === チャンクシステム ===
+export const CHUNK_SIZE = 16; // チャンクの1辺（ブロック）
+export const RENDER_DISTANCE = 4; // 描画距離（チャンク数）※パフォーマンス調整後に増やす
+
+// === 浮島生成 ===
+export const ISLAND_MIN_Y = 20; // 島の生成最低Y
+export const ISLAND_MAX_Y = 100; // 島の生成最高Y
+
+// 島の定義（位置、半径、バイオーム）
+export const ISLAND_CONFIGS = [
+  { x: 0, z: 0, y: 40, radius: 30, biome: 'grassland' as const },
+  { x: 80, z: 40, y: 55, radius: 20, biome: 'forest' as const },
+  { x: -60, z: 70, y: 35, radius: 25, biome: 'desert' as const },
+  { x: 50, z: -60, y: 65, radius: 12, biome: 'grassland' as const },
+  { x: -40, z: -50, y: 45, radius: 15, biome: 'forest' as const },
+] as const;
+
+// 地形ノイズパラメータ
+export const TERRAIN_NOISE_SCALE = 0.02; // 地形ノイズのスケール
+export const TERRAIN_OCTAVES = 4; // オクターブ数
+export const TERRAIN_PERSISTENCE = 0.5; // パーシスタンス
+export const TERRAIN_LACUNARITY = 2.0; // ラクナリティ
+export const TERRAIN_HEIGHT_SCALE = 8; // 地形の高低差（ブロック）
+export const ISLAND_SURFACE_DEPTH = 5; // 地表からの深さ（ブロック）
+
+// 底面削りノイズ
+export const BOTTOM_NOISE_SCALE = 0.08; // 底面ノイズのスケール
+export const BOTTOM_CARVE_DEPTH = 4; // 底面削りの最大深さ
+
+// 植生
+export const TREE_DENSITY = 0.02; // 木の密度（0〜1）
+export const TREE_NOISE_THRESHOLD = 0.7; // 木を生やすノイズ閾値
+export const OAK_TRUNK_HEIGHT_MIN = 3;
+export const OAK_TRUNK_HEIGHT_MAX = 5;
+export const GIANT_TREE_TRUNK_HEIGHT_MIN = 5;
+export const GIANT_TREE_TRUNK_HEIGHT_MAX = 8;
+export const CACTUS_HEIGHT_MIN = 3;
+export const CACTUS_HEIGHT_MAX = 4;
 
 // === ブロックテクスチャ ===
-export const TEXTURE_SIZE = 16; // テクスチャ解像度（px）
+export const TEXTURE_SIZE = 16;
 
 // ブロックカラー
-export const BLOCK_GRASS_TOP_COLOR = '#4a8c3f'; // 草の上面
-export const BLOCK_GRASS_SIDE_COLOR = '#6b4226'; // 草の側面（茶色）
-export const BLOCK_GRASS_SIDE_STRIPE_COLOR = '#4a8c3f'; // 草の側面上部（緑ライン）
-export const BLOCK_DIRT_COLOR = '#6b4226'; // 土
+export const BLOCK_GRASS_TOP_COLOR = '#4a8c3f';
+export const BLOCK_GRASS_SIDE_COLOR = '#6b4226';
+export const BLOCK_GRASS_SIDE_STRIPE_COLOR = '#4a8c3f';
+export const BLOCK_DIRT_COLOR = '#6b4226';
+export const BLOCK_DARK_GRASS_TOP_COLOR = '#2d6b2e'; // 森の暗い草
+export const BLOCK_DARK_GRASS_SIDE_COLOR = '#5a3720'; // 森の暗い草側面
+export const BLOCK_SAND_COLOR = '#d4b96e'; // 砂
+export const BLOCK_WOOD_COLOR = '#8b6914'; // 木の幹
+export const BLOCK_WOOD_RING_COLOR = '#a07828'; // 木の幹の年輪
+export const BLOCK_LEAVES_COLOR = '#2d8c2d'; // 葉
+export const BLOCK_DARK_LEAVES_COLOR = '#1a6b1a'; // 森の暗い葉
+export const BLOCK_CACTUS_COLOR = '#2d7a2d'; // サボテン
+export const BLOCK_DEAD_WOOD_COLOR = '#8b7355'; // 枯れ木
 
 // === 物理 ===
 export const PHYSICS_TIMESTEP = 1 / 60;
-export const GROUND_CONTACT_THRESHOLD = 0.1; // 接地判定閾値
+export const GROUND_CONTACT_THRESHOLD = 0.1;

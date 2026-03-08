@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { SKY_COLOR, CAMERA_FOV, CAMERA_NEAR, CAMERA_FAR, GRAVITY, PHYSICS_TIMESTEP } from './constants';
-import { FlatIsland } from './world/FlatIsland';
+import { WorldManager } from './world/WorldManager';
 import { PlayerController } from './player/PlayerController';
 import { CameraController } from './player/CameraController';
 import { InputManager } from './player/InputManager';
@@ -16,6 +16,7 @@ export class Game {
   private inputManager: InputManager;
   private playerController: PlayerController;
   private cameraController: CameraController;
+  private worldManager: WorldManager;
   private clock: THREE.Clock;
 
   constructor() {
@@ -28,6 +29,9 @@ export class Game {
     // シーン初期化
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(SKY_COLOR);
+
+    // フォグ（遠景をフェードアウト）
+    this.scene.fog = new THREE.Fog(SKY_COLOR, 80, 160);
 
     // ライティング
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -48,11 +52,17 @@ export class Game {
     // 入力管理
     this.inputManager = new InputManager(this.renderer.domElement);
 
-    // 浮島を生成
-    new FlatIsland(this.scene, this.physicsWorld);
+    // ワールド管理（チャンクベース）
+    this.worldManager = new WorldManager(this.scene, this.physicsWorld);
 
-    // プレイヤー生成
-    this.playerController = new PlayerController(this.physicsWorld, this.scene);
+    // スポーン位置を取得
+    const spawn = this.worldManager.getSpawnPosition();
+
+    // プレイヤー生成（スポーン位置を渡す）
+    this.playerController = new PlayerController(this.physicsWorld, this.scene, spawn);
+
+    // 初回チャンクロード
+    this.worldManager.update(spawn.x, spawn.z);
 
     // カメラコントローラー
     this.cameraController = new CameraController(this.camera);
@@ -78,7 +88,7 @@ export class Game {
   }
 
   private update(): void {
-    const dt = Math.min(this.clock.getDelta(), 0.05); // 最大50msに制限
+    const dt = Math.min(this.clock.getDelta(), 0.05);
 
     // 物理ステップ
     this.physicsWorld.step(PHYSICS_TIMESTEP, dt);
@@ -87,8 +97,11 @@ export class Game {
     const cameraYaw = this.cameraController.getYaw();
     this.playerController.update(dt, this.inputManager, cameraYaw);
 
-    // カメラ更新
+    // チャンク更新（プレイヤー位置に基づく）
     const playerPos = this.playerController.getPosition();
+    this.worldManager.update(playerPos.x, playerPos.z);
+
+    // カメラ更新
     this.cameraController.update(playerPos, this.inputManager);
 
     // 描画

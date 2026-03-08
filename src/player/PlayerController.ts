@@ -10,7 +10,6 @@ import {
   PLAYER_JUMP_HEIGHT,
   GRAVITY,
   PLAYER_TOTAL_HEIGHT,
-  ISLAND_HEIGHT_Y,
   GROUND_CONTACT_THRESHOLD,
 } from '../constants';
 
@@ -22,7 +21,7 @@ export class PlayerController {
   private currentVelocity = new THREE.Vector2(0, 0); // 水平速度(x, z)
   private isGrounded = false;
 
-  constructor(physicsWorld: CANNON.World, scene: THREE.Scene) {
+  constructor(physicsWorld: CANNON.World, scene: THREE.Scene, spawnPos?: { x: number; y: number; z: number }) {
     this.model = new PlayerModel();
 
     // 物理ボディ（摩擦なしのマテリアルで地面に引っかからないようにする）
@@ -49,8 +48,11 @@ export class PlayerController {
     physicsWorld.addContactMaterial(frictionless);
     physicsWorld.defaultContactMaterial.friction = 0;
 
-    // 初期位置: 島の上
-    this.body.position.set(0, ISLAND_HEIGHT_Y + PLAYER_TOTAL_HEIGHT / 2 + 1, 0);
+    // 初期位置: スポーン位置
+    const sx = spawnPos?.x ?? 0;
+    const sy = spawnPos?.y ?? 50;
+    const sz = spawnPos?.z ?? 0;
+    this.body.position.set(sx, sy + PLAYER_TOTAL_HEIGHT / 2, sz);
     physicsWorld.addBody(this.body);
 
     // シーンにモデルを追加
@@ -71,8 +73,8 @@ export class PlayerController {
   update(dt: number, input: InputManager, cameraYaw: number): void {
     // === 移動入力 ===
     const movement = input.getMovement();
-    const isRunning = input.isRunning();
-    const targetSpeed = isRunning ? PLAYER_RUN_SPEED : PLAYER_WALK_SPEED;
+    const isWalking = input.isRunning(); // Shift押下で歩き
+    const targetSpeed = isWalking ? PLAYER_WALK_SPEED : PLAYER_RUN_SPEED;
     const isMoving = movement.x !== 0 || movement.z !== 0;
 
     // カメラの向きに対して相対的に移動方向を計算
@@ -115,16 +117,10 @@ export class PlayerController {
     this.body.velocity.x = this.currentVelocity.x;
     this.body.velocity.z = this.currentVelocity.y;
 
-    // === ジャンプ ===
-    // 接地判定を毎フレーム更新
-    this.isGrounded =
-      Math.abs(this.body.velocity.y) < GROUND_CONTACT_THRESHOLD;
-
-    if (input.isJumping() && this.isGrounded) {
-      // v = sqrt(2 * g * h) でジャンプ初速を計算
+    // === ジャンプ（空中でも可能 — 飛行用） ===
+    if (input.isJumping()) {
       const jumpVelocity = Math.sqrt(2 * GRAVITY * PLAYER_JUMP_HEIGHT);
       this.body.velocity.y = jumpVelocity;
-      this.isGrounded = false;
     }
 
     // === モデルの位置・回転を物理ボディに同期 ===
@@ -140,7 +136,7 @@ export class PlayerController {
     }
 
     // アニメーション更新
-    this.model.update(dt, isMoving, isRunning);
+    this.model.update(dt, isMoving, !isWalking);
   }
 
   // 値を目標に向けて一定量近づけるヘルパー
