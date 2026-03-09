@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BLOCK_INTERACT_RANGE, BLOCK_HIGHLIGHT_COLOR, BLOCK_HIGHLIGHT_OPACITY, CAMERA_DISTANCE } from '../constants';
+import { BLOCK_INTERACT_RANGE, BLOCK_HIGHLIGHT_COLOR, BLOCK_HIGHLIGHT_OPACITY, CAMERA_DISTANCE, TEXTURE_SIZE } from '../constants';
 import { BlockId, getBlockInfo, getBlockName } from './BlockTypes';
 import { Inventory } from '../inventory/Inventory';
 import { InputManager } from '../player/InputManager';
@@ -7,6 +7,80 @@ import { WorldManager } from '../world/WorldManager';
 import { getDebugLog } from '../ui/DebugLog';
 import { BreakParticles } from '../effects/BreakParticles';
 import { PlayerController } from '../player/PlayerController';
+
+// 破壊段階数
+const BREAK_STAGES = 8;
+
+// 破壊クラックテクスチャを段階ごとに生成
+function generateBreakTextures(): THREE.Texture[] {
+  const size = TEXTURE_SIZE * 4; // 高解像度で生成
+  const textures: THREE.Texture[] = [];
+
+  for (let stage = 0; stage < BREAK_STAGES; stage++) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    // 基本の暗いオーバーレイ（段階に応じて濃くなる）
+    const alpha = 0.1 + (stage / (BREAK_STAGES - 1)) * 0.5;
+    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+    ctx.fillRect(0, 0, size, size);
+
+    // クラック線を描画
+    ctx.strokeStyle = `rgba(0, 0, 0, ${0.3 + (stage / (BREAK_STAGES - 1)) * 0.7})`;
+    ctx.lineWidth = 1 + stage * 0.5;
+
+    // 段階に応じてクラック数を増やす
+    const crackCount = 2 + stage * 2;
+    const rng = createSimpleRng(stage * 1337);
+
+    for (let i = 0; i < crackCount; i++) {
+      const startX = rng() * size;
+      const startY = rng() * size;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+
+      const segments = 3 + Math.floor(rng() * 4);
+      let cx = startX, cy = startY;
+      for (let s = 0; s < segments; s++) {
+        cx += (rng() - 0.5) * size * 0.4;
+        cy += (rng() - 0.5) * size * 0.4;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+
+    // 後半段階では欠片模様を追加
+    if (stage >= BREAK_STAGES / 2) {
+      const chunkCount = (stage - BREAK_STAGES / 2 + 1) * 3;
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.2 + stage * 0.05})`;
+      for (let i = 0; i < chunkCount; i++) {
+        const x = rng() * size;
+        const y = rng() * size;
+        const w = 2 + rng() * 6;
+        const h = 2 + rng() * 6;
+        ctx.fillRect(x, y, w, h);
+      }
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.magFilter = THREE.NearestFilter;
+    texture.minFilter = THREE.NearestFilter;
+    textures.push(texture);
+  }
+
+  return textures;
+}
+
+// シード付き簡易乱数
+function createSimpleRng(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1103515245 + 12345) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+}
 
 // マウスカーソル位置からレイキャストし、ブロックの破壊/設置を行うクラス
 // 操作: クリック短押し=設置、長押し=破壊（iPad互換）
@@ -27,6 +101,12 @@ export class BlockInteraction {
   // 破壊進捗
   private breakProgress = 0;
   private breakTarget: { x: number; y: number; z: number } | null = null;
+
+  // 破壊オーバーレイ
+  private breakOverlay: THREE.Mesh;
+  private breakTextures: THREE.Texture[];
+  private breakOverlayMaterial: THREE.MeshBasicMaterial;
+  private currentBreakStage = -1;
 
   // 破壊パーティクル
   private breakParticles: BreakParticles;
@@ -64,6 +144,22 @@ export class BlockInteraction {
     const wireGeo = new THREE.BoxGeometry(1.005, 1.005, 1.005);
     const wireMat = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
     this.highlightMesh.add(new THREE.Mesh(wireGeo, wireMat));
+
+    // 破壊進捗オーバーレイ
+    this.breakTextures = generateBreakTextures();
+    this.breakOverlayMaterial = new THREE.MeshBasicMaterial({
+      map: this.breakTextures[0],
+      transparent: true,
+      depthTest: true,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const overlayGeo = new THREE.BoxGeometry(1.002, 1.002, 1.002);
+    this.breakOverlay = new THREE.Mesh(overlayGeo, this.breakOverlayMaterial);
+    this.breakOverlay.visible = false;
+    this.breakOverlay.renderOrder = 1;
+    this.scene.add(this.breakOverlay);
 
     // 破壊パーティクル
     this.breakParticles = new BreakParticles(scene);
@@ -114,6 +210,7 @@ export class BlockInteraction {
       }
       this.breakProgress = 0;
       this.breakTarget = null;
+      this.hideBreakOverlay();
     }
 
     // パーティクル更新
@@ -268,6 +365,9 @@ export class BlockInteraction {
       blockId, progress
     );
 
+    // 破壊進捗オーバーレイ更新
+    this.updateBreakOverlay(this.targetBlock, progress);
+
     if (this.breakProgress >= info.hardness) {
       const dropName = info.drop !== BlockId.AIR ? getBlockName(info.drop) : 'なし';
       getDebugLog().log(`破壊完了: ${info.name} → ドロップ: ${dropName}`);
@@ -289,7 +389,26 @@ export class BlockInteraction {
 
       this.breakProgress = 0;
       this.breakTarget = null;
+      this.hideBreakOverlay();
     }
+  }
+
+  // 破壊進捗オーバーレイを更新
+  private updateBreakOverlay(block: { x: number; y: number; z: number }, progress: number): void {
+    const stage = Math.min(Math.floor(progress * BREAK_STAGES), BREAK_STAGES - 1);
+    if (stage !== this.currentBreakStage) {
+      this.breakOverlayMaterial.map = this.breakTextures[stage] ?? null;
+      this.breakOverlayMaterial.needsUpdate = true;
+      this.currentBreakStage = stage;
+    }
+    this.breakOverlay.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
+    this.breakOverlay.visible = true;
+  }
+
+  // 破壊オーバーレイを非表示
+  private hideBreakOverlay(): void {
+    this.breakOverlay.visible = false;
+    this.currentBreakStage = -1;
   }
 
   // ブロック設置

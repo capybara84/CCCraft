@@ -44,7 +44,7 @@
 
 ### ファイル構成（Phase 3完了時点）
 - src/blocks/BlockTextures.ts — テクスチャアトラス生成+UV管理+パーティクル用色
-- src/blocks/BlockInteraction.ts — DDAレイキャスト、破壊/設置、パーティクル連携
+- src/blocks/BlockInteraction.ts — DDAレイキャスト、破壊/設置、パーティクル連携、破壊進捗オーバーレイ（8段階クラック）
 - src/effects/BreakParticles.ts — 破壊エフェクト（進捗連動+バースト）
 - src/inventory/ — Inventory, ItemStack
 - src/ui/ — HUD, InventoryUI, DebugLog
