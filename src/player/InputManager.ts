@@ -30,6 +30,13 @@ export class InputManager {
   // デバッグ表示トグル
   private _debugToggled = false;
 
+  // グライダートグル
+  private _gliderToggled = false;
+
+  // タッチボタン入力
+  private _touchJumping = false;
+  private _touchGliderToggled = false;
+
   // 閾値
   private readonly HOLD_THRESHOLD = 300; // 長押し判定（ミリ秒）
   private readonly DRAG_THRESHOLD = 5; // ドラッグ判定（ピクセル）
@@ -47,6 +54,9 @@ export class InputManager {
       }
       if (e.code === 'KeyP') {
         this._debugToggled = true;
+      }
+      if (e.code === 'KeyG') {
+        this._gliderToggled = true;
       }
     });
     window.addEventListener('keyup', (e) => {
@@ -131,7 +141,7 @@ export class InputManager {
   }
 
   isJumping(): boolean {
-    return this.keys.has('Space');
+    return this.keys.has('Space') || this._touchJumping;
   }
 
   isRunning(): boolean {
@@ -198,6 +208,22 @@ export class InputManager {
     const toggled = this._debugToggled;
     this._debugToggled = false;
     return toggled;
+  }
+
+  consumeGliderToggle(): boolean {
+    const toggled = this._gliderToggled || this._touchGliderToggled;
+    this._gliderToggled = false;
+    this._touchGliderToggled = false;
+    return toggled;
+  }
+
+  // タッチボタンからの入力
+  setTouchJumping(value: boolean): void {
+    this._touchJumping = value;
+  }
+
+  triggerGliderToggle(): void {
+    this._touchGliderToggled = true;
   }
 
   endFrame(): void {

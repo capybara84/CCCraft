@@ -48,8 +48,12 @@ export class CameraController {
     this.camera.lookAt(targetPosition);
   }
 
-  // PlayerControllerが移動方向の計算に使うyaw角を返す
   getYaw(): number {
     return this.yaw;
+  }
+
+  // カメラのピッチ（ラジアン）を返す。飛行モードでカメラ方向に進むために使用
+  getPitchRad(): number {
+    return (this.pitchDeg * Math.PI) / 180;
   }
 }

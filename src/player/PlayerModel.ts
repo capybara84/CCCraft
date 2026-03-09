@@ -444,5 +444,23 @@ export class PlayerModel {
       this.leftLegPivot.rotation.x *= 0.8;
       this.rightLegPivot.rotation.x *= 0.8;
     }
+    // 飛行ポーズからの復帰: rotation.zを0に戻す
+    this.leftArmPivot.rotation.z *= 0.8;
+    this.rightArmPivot.rotation.z *= 0.8;
+  }
+
+  // 飛行中のふわふわアニメーション
+  updateFlying(_dt: number, floatTime: number): void {
+    // 腕を横に開いて大きく羽ばたく
+    const armBob = Math.sin(floatTime * 8) * 0.6;
+    this.leftArmPivot.rotation.x = 0;
+    this.rightArmPivot.rotation.x = 0;
+    this.leftArmPivot.rotation.z = -(0.8 + armBob);
+    this.rightArmPivot.rotation.z = 0.8 + armBob;
+
+    // 脚をだらんと垂らしてゆっくり揺れる
+    const legSway = Math.sin(floatTime * 1.3) * 0.12;
+    this.leftLegPivot.rotation.x = 0.2 + legSway;
+    this.rightLegPivot.rotation.x = 0.2 - legSway;
   }
 }

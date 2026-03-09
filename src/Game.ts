@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { SKY_COLOR, CAMERA_FOV, CAMERA_NEAR, CAMERA_FAR, GRAVITY, PHYSICS_TIMESTEP } from './constants';
+import { SKY_COLOR, CAMERA_FOV, CAMERA_NEAR, CAMERA_FAR, GRAVITY, PHYSICS_TIMESTEP, ABYSS_Y } from './constants';
 import { WorldManager } from './world/WorldManager';
 import { occlusionUniforms } from './world/ChunkMesher';
 import { PlayerController } from './player/PlayerController';
@@ -10,6 +10,7 @@ import { BlockInteraction } from './blocks/BlockInteraction';
 import { Inventory } from './inventory/Inventory';
 import { HUD } from './ui/HUD';
 import { InventoryUI } from './ui/InventoryUI';
+import { RespawnOverlay } from './ui/RespawnOverlay';
 import { getDebugLog } from './ui/DebugLog';
 
 // ゲームのメインクラス
@@ -27,9 +28,12 @@ export class Game {
   private inventory: Inventory;
   private hud: HUD;
   private inventoryUI: InventoryUI;
+  private respawnOverlay: RespawnOverlay;
   private clock: THREE.Clock;
   private debugVisible = true;
 
+  // スポーン位置（リスポーン用に保持）
+  private spawnPosition: { x: number; y: number; z: number };
 
   constructor() {
     // レンダラー初期化
@@ -65,6 +69,7 @@ export class Game {
     // ワールド管理
     this.worldManager = new WorldManager(this.scene, this.physicsWorld);
     const spawn = this.worldManager.getSpawnPosition();
+    this.spawnPosition = spawn;
 
     // プレイヤー生成
     this.playerController = new PlayerController(this.physicsWorld, this.scene, spawn);
@@ -85,10 +90,13 @@ export class Game {
     this.blockInteraction.setPlayerController(this.playerController);
 
     // HUD
-    this.hud = new HUD(this.inventory);
+    this.hud = new HUD(this.inventory, this.inputManager);
 
     // インベントリUI
     this.inventoryUI = new InventoryUI(this.inventory);
+
+    // リスポーンオーバーレイ
+    this.respawnOverlay = new RespawnOverlay();
 
     // 時間管理
     this.clock = new THREE.Clock();
@@ -100,8 +108,8 @@ export class Game {
     const debug = getDebugLog();
     debug.log('CCCraft 起動');
     debug.log(`スポーン位置: (${spawn.x}, ${spawn.y}, ${spawn.z})`);
-    debug.log('操作: WASD移動 / Space飛行 / 左クリック破壊 / 右クリック設置');
-    debug.log('操作: 右ドラッグ カメラ回転 / 1-8 ホットバー / E インベントリ');
+    debug.log('操作: WASD移動 / Space飛行 / G グライダー');
+    debug.log('操作: 左クリック破壊 / 右クリック設置 / 1-8 ホットバー / E インベントリ');
   }
 
   private onResize(): void {
@@ -119,19 +127,33 @@ export class Game {
   private update(): void {
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
+    // リスポーンフェード更新
+    this.respawnOverlay.update(dt);
+
     // 物理ステップ
     this.physicsWorld.step(PHYSICS_TIMESTEP, dt);
 
     // プレイヤー更新
     const cameraYaw = this.cameraController.getYaw();
+    this.playerController.setCameraPitch(this.cameraController.getPitchRad());
     this.playerController.update(dt, this.inputManager, cameraYaw);
 
+    // 奈落判定
+    const pos = this.playerController.getPosition();
+    if (pos.y < ABYSS_Y && !this.respawnOverlay.isActive) {
+      getDebugLog().log('奈落に落下！リスポーン...');
+      this.respawnOverlay.startRespawnFade(() => {
+        this.playerController.respawn(
+          this.spawnPosition.x, this.spawnPosition.y, this.spawnPosition.z
+        );
+      });
+    }
+
     // チャンク更新
-    const playerPos = this.playerController.getPosition();
-    this.worldManager.update(playerPos.x, playerPos.z);
+    this.worldManager.update(pos.x, pos.z);
 
     // カメラ更新
-    this.cameraController.update(playerPos, this.inputManager);
+    this.cameraController.update(pos, this.inputManager);
 
     // デバッグ表示トグル（Pキー）
     if (this.inputManager.consumeDebugToggle()) {
@@ -147,18 +169,19 @@ export class Game {
 
     // ブロック操作更新（インベントリ開いてる間は無効）
     if (!this.inventoryUI.isOpen) {
-      this.blockInteraction.update(dt, this.inputManager, playerPos);
+      this.blockInteraction.update(dt, this.inputManager, pos);
     }
 
     // HUD更新
     this.hud.update();
+    this.hud.updateFlyButton(this.playerController.isGliding());
 
     // 入力フレーム終了
     this.inputManager.endFrame();
 
     // 遮蔽フェード用uniform更新
     occlusionUniforms.uCameraPos.value.copy(this.camera.position);
-    occlusionUniforms.uPlayerPos.value.copy(playerPos);
+    occlusionUniforms.uPlayerPos.value.copy(pos);
 
     // 描画
     this.renderer.render(this.scene, this.camera);

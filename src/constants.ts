@@ -9,7 +9,7 @@ export const CAMERA_PITCH_ANGLE = 35; // 俯角（度）
 export const CAMERA_DISTANCE = 10; // プレイヤーからの距離（ブロック）
 export const CAMERA_LERP_FACTOR = 0.1; // スムーズ追従の補間係数
 export const CAMERA_ROTATE_SPEED = 0.01; // マウスドラッグ回転速度
-export const CAMERA_PITCH_MIN = 10; // ピッチ最小角度（度）
+export const CAMERA_PITCH_MIN = -60; // ピッチ最小角度（度）※マイナスで見上げ
 export const CAMERA_PITCH_MAX = 80; // ピッチ最大角度（度）
 
 // === プレイヤー移動 ===
@@ -115,3 +115,11 @@ export const HOTBAR_BG_COLOR = 'rgba(0, 0, 0, 0.6)'; // スロット背景色
 // === 物理 ===
 export const PHYSICS_TIMESTEP = 1 / 60;
 export const GROUND_CONTACT_THRESHOLD = 0.1;
+
+// === 飛行モード ===
+export const GLIDER_HORIZONTAL_SPEED = 12;
+
+// === 奈落 & リスポーン ===
+export const ABYSS_Y = -10;
+export const RESPAWN_FADE_DURATION = 0.5;
+
